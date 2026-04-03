@@ -3260,42 +3260,45 @@
             scene.add(g);
 
             // Асинхронно заменяем на FBX модель
-            if (charModelsReady) {
-                loadCharForBot(team, idx, (model) => {
-                    if (!model) return;
-                    const pos = g.position.clone();
-                    const rot = g.rotation.clone();
-                    scene.remove(g);
-                    model.position.copy(pos);
-                    model.position.y = 0;
-                    model.rotation.copy(rot);
-                    scene.add(model);
-                    // Обновляем ссылку в mpRemotePlayers
-                    Object.values(mpRemotePlayers).forEach(rp => {
-                        if (rp.mesh === g) {
-                            rp.mesh = model;
-                            rp.useGltf = true;
-                            rp.mixer = model.userData.mixer;
-                            rp.actions = model.userData.actions;
-                            // Привязываем оружие к руке
-                            if (model.userData.rightHand && gltfWeapons._loaded && rp.weapon) {
-                                const wKey = rp.weapon;
-                                if (gltfWeapons[wKey]) {
-                                    const weaponClone = gltfWeapons[wKey].clone();
-                                    weaponClone.scale.set(0.7, 0.7, 0.7);
-                                    weaponClone.position.set(5.5, 20, 0);
-                                    weaponClone.quaternion.identity();
-                                    const qZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
-                                    const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-                                    weaponClone.quaternion.copy(qX.multiply(qZ));
-                                    model.userData.rightHand.add(weaponClone);
-                                    rp.gunMesh = weaponClone;
+            const tryLoadFBX = () => {
+                if (charModelsReady) {
+                    loadCharForBot(team, idx, (model) => {
+                        if (!model) return;
+                        const pos = g.position.clone();
+                        const rot = g.rotation.clone();
+                        scene.remove(g);
+                        model.position.copy(pos);
+                        model.position.y = 0;
+                        model.rotation.copy(rot);
+                        scene.add(model);
+                        Object.values(mpRemotePlayers).forEach(rp => {
+                            if (rp.mesh === g) {
+                                rp.mesh = model;
+                                rp.useGltf = true;
+                                rp.mixer = model.userData.mixer;
+                                rp.actions = model.userData.actions;
+                                if (model.userData.rightHand && gltfWeapons._loaded && rp.weapon) {
+                                    const wKey = rp.weapon;
+                                    if (gltfWeapons[wKey]) {
+                                        const weaponClone = gltfWeapons[wKey].clone();
+                                        weaponClone.scale.set(0.7, 0.7, 0.7);
+                                        weaponClone.position.set(5.5, 20, 0);
+                                        weaponClone.quaternion.identity();
+                                        const qZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+                                        const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+                                        weaponClone.quaternion.copy(qX.multiply(qZ));
+                                        model.userData.rightHand.add(weaponClone);
+                                        rp.gunMesh = weaponClone;
+                                    }
                                 }
                             }
-                        }
+                        });
                     });
-                });
-            }
+                } else {
+                    setTimeout(tryLoadFBX, 500);
+                }
+            };
+            tryLoadFBX();
 
             return g;
         }
