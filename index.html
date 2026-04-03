@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS: Mirage JS - Extended Arsenal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="flash-overlay"></div>
+    <div id="smoke-overlay"></div>
+    <div id="blood-fx"></div>
+    <div id="vignette"></div>
+    <div id="scope-overlay"></div>
+    <div id="reload-hint">RELOADING...</div>
+    <div id="knife-range-indicator">🔪 SLASH!</div>
+    <div id="hitmarker"></div>
+    <div id="dmg-indicator" class="dmg-indicator"></div>
+    <div id="chat-box"></div>
+    <div id="chat-input-box"><input id="chat-input" placeholder="Press Enter to send..." maxlength="100"></div>
+    <div id="voice-chat-btn" style="display:none;position:fixed;bottom:60px;right:10px;background:rgba(0,0,0,0.6);border:1px solid rgba(50,200,100,0.4);color:#4fc;padding:8px 12px;border-radius:4px;cursor:pointer;font-family:monospace;font-size:11px;z-index:200;user-select:none;" onclick="toggleVoice()">🎤 Voice: OFF</div>
+    <audio id="remote-audio" autoplay style="display:none;"></audio>
+    <div id="freeze-screen"><h2 id="freeze-title">FREEZE TIME</h2><p id="freeze-sub">Buy weapons and prepare!</p></div>
+    <div id="round-end-screen"><h2 id="round-end-title"></h2><p id="round-end-sub"></p></div>
+    <div id="bomb-bar"><div id="bomb-bar-label">💣 BOMB</div><div id="bomb-bar-track"><div id="bomb-bar-fill"></div></div></div>
+    <div id="defuse-bar"><div id="defuse-bar-label">🔧 DEFUSING... [E]</div><div id="defuse-bar-track"><div id="defuse-bar-fill"></div></div></div>
+    <div id="bomb-indicator">💣 BOMB PLANTED</div>
+
+    <div id="scoreboard">
+        <div id="scoreboard-header">
+            <span>Scoreboard</span>
+            <span class="sb-round" id="sb-round-label">Round 1</span>
+        </div>
+        <div class="sb-cols">
+            <div>Player</div><div style="text-align:center">Kills</div><div style="text-align:center">Deaths</div><div style="text-align:center">Money</div>
+        </div>
+        <div id="sb-rows"></div>
+        <div class="sb-footer">TAB — HOLD TO VIEW</div>
+    </div>
+    <div id="death-screen">
+        <h1>YOU DIED</h1>
+        <p style="font-size:24px;" id="death-stats"></p>
+        <button onclick="respawnPlayer()">RESPAWN</button>
+    </div>
+    <div id="settings-menu">
+        <h2>⚙ SETTINGS</h2>
+        <div class="setting-row">
+            <label>Mouse Sensitivity</label>
+            <input type="range" id="sens-slider-ig" min="0.1" max="5" step="0.1" value="1.0" oninput="updateSensitivity(this.value)">
+            <span id="sens-value-ig">1.0</span>
+        </div>
+        <div class="setting-row">
+            <label>Scope Sensitivity</label>
+            <input type="range" id="scope-sens-slider-ig" min="0.1" max="5" step="0.1" value="0.3" oninput="updateScopeSensitivity(this.value)">
+            <span id="scope-sens-value-ig">0.3</span>
+        </div>
+        <button id="settings-close" onclick="closeSettings()">RESUME [Backspace]</button>
+        <button id="settings-mainmenu" onclick="goToMainMenu()" style="display:block;width:100%;padding:10px;margin-top:8px;background:transparent;border:1px solid rgba(255,68,68,0.4);color:#ff4444;font-size:15px;font-family:inherit;border-radius:4px;cursor:pointer;">⬅ MAIN MENU</button>
+    </div>
+    <div id="buy-menu">
+        <h2 style="text-align:center; color:#d2b48c; margin-top:0;">🛒 BUY MENU (B)</h2>
+        <div class="buy-category">🔫 PISTOLS</div>
+        <div class="buy-grid">
+            <div class="item" onclick="buy('glock')">Glock-18<br><span class="price">$200</span></div>
+            <div class="item" onclick="buy('usp')">USP-S<br><span class="price">FREE (default)</span></div>
+            <div class="item" onclick="buy('deagle')">Desert Eagle<br><span class="price">$700</span></div>
+        </div>
+        <div class="buy-category">🔫 SMGs</div>
+        <div class="buy-grid">
+            <div class="item" onclick="buy('mp5')">MP5-SD<br><span class="price">$1500</span></div>
+            <div class="item" onclick="buy('vector')">Vector<br><span class="price">$1050</span></div>
+            <div class="item" onclick="buy('p90')">P90<br><span class="price">$2350</span></div>
+        </div>
+        <div class="buy-category">🔫 RIFLES</div>
+        <div class="buy-grid">
+            <div class="item" onclick="buy('ak47')">AK-47<br><span class="price">$2700</span></div>
+            <div class="item" onclick="buy('m4a4')">M4A4<br><span class="price">$3100</span></div>
+        </div>
+        <div class="buy-category">🎯 SNIPERS</div>
+        <div class="buy-grid">
+            <div class="item" onclick="buy('ssg08')">SSG 08 (Scout)<br><span class="price">$1700</span></div>
+            <div class="item" onclick="buy('awp')">AWP<br><span class="price">$4750</span></div>
+        </div>
+        <div class="buy-category">🛡 GEAR</div>
+        <div class="buy-grid">
+            <div class="item" onclick="buy('armor')">Kevlar + Helmet<br><span class="price">$1000</span></div>
+            <div class="item" onclick="buy('he')">HE Grenade<br><span class="price">$300</span></div>
+            <div class="item" onclick="buy('flash')">Flashbang<br><span class="price">$200</span></div>
+            <div class="item" onclick="buy('smoke')">Smoke Grenade<br><span class="price">$300</span></div>
+        </div>
+        <div class="item" style="background:#422; margin-top:15px;" onclick="closeBuyMenu()">CLOSE [B]</div>
+    </div>
+    <div id="ui">
+        <div id="score-board"><div id="score-t">T: 0</div><div id="score-ct">CT: 0</div></div>
+        <div id="round-label">Round 1</div>
+        <div id="team-label"></div>
+        <div id="kill-feed"></div>
+        <div id="radar-box"><canvas id="radar" width="220" height="220"></canvas></div>
+        <div id="money">$ 800</div>
+        <div id="kills-counter">☠ 0</div>
+        <div id="round-timer">2:00</div>
+        <div id="crosshair"></div>
+        <div id="hp-bar">✚ 100</div>
+        <div id="armor-bar"></div>
+        <div id="ammo-bar"><span id="w-name">Knife</span><br><span id="w-count">—</span></div>
+        <div id="weapon-slots"></div>
+        <div id="fps-counter">0 FPS</div>
+    </div>
+
+    <div id="mp-click-to-play" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); flex-direction:column; align-items:center; justify-content:center; z-index:600; pointer-events:auto; cursor:pointer;" onclick="mpClickToPlay()">
+        <div style="font-size:36px;color:#4fc;letter-spacing:4px;margin-bottom:12px;">🌐 ONLINE</div>
+        <div style="font-size:18px;color:#fff;letter-spacing:2px;margin-bottom:8px;">Team: <span id="mp-team-label" style="color:#4fc;font-weight:bold;"></span></div>
+        <div style="font-size:14px;color:#888;letter-spacing:2px;">Click anywhere to start</div>
+    </div>
+
+    <div id="online-lobby" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,#0a0a0a,#0a1a0a); flex-direction:column; align-items:center; justify-content:center; z-index:500; pointer-events:auto;">
+        <div style="font-size:32px;letter-spacing:6px;color:#4fc;margin-bottom:6px;">🌐 ONLINE</div>
+        <div style="font-size:12px;color:#555;letter-spacing:2px;margin-bottom:30px;">P2P via PeerJS</div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(50,200,100,0.3);padding:30px 40px;border-radius:6px;min-width:340px;">
+            <div id="online-status" style="font-size:12px;color:#fa0;letter-spacing:1px;margin-bottom:16px;min-height:18px;text-align:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button class="menu-btn" style="background:#1a3a1a;color:#4fc;border:1px solid rgba(50,200,100,0.4);" onclick="hostOnline()">🏠 HOST GAME</button>
+                <div style="display:flex;gap:8px;">
+                    <input id="join-code-input" placeholder="Paste room code here" style="flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(50,200,100,0.3);color:#fff;border-radius:3px;font-family:monospace;font-size:11px;letter-spacing:1px;outline:none;min-width:0;">
+                    <button class="menu-btn" style="background:#1a3a1a;color:#4fc;border:1px solid rgba(50,200,100,0.4);width:auto;padding:10px 16px;" onclick="joinOnline()">JOIN</button>
+                </div>
+                <div id="online-room-code" style="display:none;text-align:center;padding:12px;background:rgba(50,200,100,0.1);border:1px solid rgba(50,200,100,0.3);border-radius:4px;">
+                    <div style="font-size:11px;color:#888;letter-spacing:2px;margin-bottom:6px;">SHARE THIS CODE</div>
+                    <div id="online-code-display" style="font-size:11px;color:#4fc;font-weight:bold;letter-spacing:2px;word-break:break-all;margin-bottom:8px;"></div>
+                    <button onclick="copyRoomCode(this)" style="background:rgba(50,200,100,0.2);border:1px solid rgba(50,200,100,0.4);color:#4fc;padding:6px 16px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:12px;letter-spacing:1px;">📋 COPY CODE</button>
+                </div>
+                <div id="online-players-list" style="display:none;text-align:center;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(50,200,100,0.2);border-radius:4px;margin-top:8px;">
+                    <div style="font-size:10px;color:#888;letter-spacing:2px;margin-bottom:6px;">PLAYERS</div>
+                    <div id="online-player-host" style="font-size:12px;color:#4fc;margin-bottom:4px;">🟢 Host (you)</div>
+                    <div id="online-player-guest" style="font-size:12px;color:#666;">⚫ Waiting...</div>
+                </div>
+                <div id="online-start-btn" style="display:none;">
+                    <button class="menu-btn menu-btn-primary" onclick="startOnlineGame()">▶ START</button>
+                </div>
+            </div>
+        </div>
+        <button class="menu-btn menu-btn-danger" style="margin-top:16px;width:340px;" onclick="hideOnlineLobby()">← BACK</button>
+    </div>
+
+    <div id="team-select" style="display:none;">
+        <h2>Choose Your Side</h2>
+        <p>Bots will spawn for the opposing team</p>
+        <div class="team-cards">
+            <div class="team-card team-card-ct" onclick="selectTeam('CT')">
+                <div class="team-card-icon">🛡</div>
+                <div class="team-card-name">CT</div>
+                <div class="team-card-desc">Counter-Terrorist</div>
+                <div class="team-card-desc" style="margin-top:6px;color:#4af">Defuse the bomb</div>
+            </div>
+            <div class="team-card team-card-t" onclick="selectTeam('T')">
+                <div class="team-card-icon">💣</div>
+                <div class="team-card-name">T</div>
+                <div class="team-card-desc">Terrorist</div>
+                <div class="team-card-desc" style="margin-top:6px;color:#fa4">Plant the bomb</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lobby" style="display:flex;">
+        <div class="menu-logo">CS: MIRAGE</div>
+        <div class="menu-subtitle">JavaScript Edition</div>
+        <div id="loading-indicator" style="color:#fa0;font-size:14px;letter-spacing:2px;margin:20px 0;">⏳ Loading...</div>
+        <div class="menu-panel">
+            <div class="menu-field">
+                <label>Player Name</label>
+                <input id="player-name" placeholder="Enter your name" maxlength="16" value="Player">
+            </div>
+            <div id="menu-buttons" style="display:none;">
+            <div class="menu-divider"></div>
+            <button class="menu-btn menu-btn-primary" onclick="startSolo()">▶ PLAY</button>
+            <button class="menu-btn menu-btn-primary" onclick="startEbash()" style="background:#8b0000; color:#fff;">💀 ЕБАШЬ</button>
+            <button class="menu-btn menu-btn-secondary" onclick="showOnlineLobby()" style="border-color:rgba(50,200,100,0.5);color:#4fc;">🌐 ONLINE</button>
+            <button class="menu-btn menu-btn-secondary" onclick="toggleMenuSettings()">⚙ SETTINGS</button>
+            <button class="menu-btn menu-btn-secondary" onclick="toggleMenuControls()">⌨ CONTROLS</button>
+            <button class="menu-btn menu-btn-danger" onclick="window.close()">✕ QUIT</button>
+            </div>
+            <div id="menu-settings">
+                <div class="menu-divider"></div>
+                <div class="menu-setting-row">
+                    <label>Mouse Sensitivity</label>
+                    <input type="range" id="sens-slider" min="0.1" max="5" step="0.1" value="1.0" oninput="updateSensitivity(this.value)">
+                    <span id="sens-value">1.0</span>
+                </div>
+                <div class="menu-setting-row">
+                    <label>Scope Sensitivity</label>
+                    <input type="range" id="scope-sens-slider" min="0.1" max="5" step="0.1" value="0.3" oninput="updateScopeSensitivity(this.value)">
+                    <span id="scope-sens-value">0.3</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-setting-row">
+                    <label>Graphics Quality</label>
+                    <select id="quality-select" onchange="setQuality(this.value)" style="background:#222;color:#fff;border:1px solid rgba(210,180,140,0.4);padding:6px 10px;border-radius:3px;font-family:inherit;font-size:12px;cursor:pointer;">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+            <div id="menu-controls" style="display:none;">
+                <div class="menu-divider"></div>
+                <div class="controls-grid">
+                    <div class="controls-section">MOVEMENT</div>
+                    <div class="ctrl-row"><span class="ctrl-key">W A S D</span><span class="ctrl-desc">Move</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">SPACE</span><span class="ctrl-desc">Jump</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">SHIFT</span><span class="ctrl-desc">Walk (slow)</span></div>
+                    <div class="controls-section">COMBAT</div>
+                    <div class="ctrl-row"><span class="ctrl-key">LMB</span><span class="ctrl-desc">Shoot / Attack</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">RMB</span><span class="ctrl-desc">Aim (scope)</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">R</span><span class="ctrl-desc">Reload</span></div>
+                    <div class="controls-section">WEAPONS</div>
+                    <div class="ctrl-row"><span class="ctrl-key">1</span><span class="ctrl-desc">Primary weapon</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">2</span><span class="ctrl-desc">Secondary weapon</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">3</span><span class="ctrl-desc">Knife</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">4</span><span class="ctrl-desc">HE Grenade</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">5</span><span class="ctrl-desc">Flashbang</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">6</span><span class="ctrl-desc">Smoke grenade</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">F</span><span class="ctrl-desc">Pick up weapon</span></div>
+                    <div class="controls-section">OTHER</div>
+                    <div class="ctrl-row"><span class="ctrl-key">B</span><span class="ctrl-desc">Buy menu</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">E</span><span class="ctrl-desc">Defuse bomb</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">BACKSPACE</span><span class="ctrl-desc">Pause menu</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">TAB</span><span class="ctrl-desc">Scoreboard</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">T</span><span class="ctrl-desc">Chat (online)</span></div>
+                    <div class="ctrl-row"><span class="ctrl-key">V (hold)</span><span class="ctrl-desc">Voice chat (online)</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="menu-version">v1.0 · THREE.JS</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/utils/SkeletonUtils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.6.10/umd/index.js"></script>
+    <script defer src="game.js"></script>
+</body>
+</html>
