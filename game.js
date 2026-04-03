@@ -3259,46 +3259,49 @@
             g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
             scene.add(g);
 
-            // Асинхронно заменяем на FBX модель
+            // Сохраняем ссылку на g для замены
+            g._replacePending = true;
             const tryLoadFBX = () => {
-                if (charModelsReady) {
-                    loadCharForBot(team, idx, (model) => {
-                        if (!model) return;
-                        const pos = g.position.clone();
-                        const rot = g.rotation.clone();
-                        scene.remove(g);
-                        model.position.copy(pos);
-                        model.position.y = 0;
-                        model.rotation.copy(rot);
-                        scene.add(model);
-                        Object.values(mpRemotePlayers).forEach(rp => {
-                            if (rp.mesh === g) {
-                                rp.mesh = model;
-                                rp.useGltf = true;
-                                rp.mixer = model.userData.mixer;
-                                rp.actions = model.userData.actions;
-                                if (model.userData.rightHand && gltfWeapons._loaded && rp.weapon) {
-                                    const wKey = rp.weapon;
-                                    if (gltfWeapons[wKey]) {
-                                        const weaponClone = gltfWeapons[wKey].clone();
-                                        weaponClone.scale.set(0.7, 0.7, 0.7);
-                                        weaponClone.position.set(5.5, 20, 0);
-                                        weaponClone.quaternion.identity();
-                                        const qZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
-                                        const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-                                        weaponClone.quaternion.copy(qX.multiply(qZ));
-                                        model.userData.rightHand.add(weaponClone);
-                                        rp.gunMesh = weaponClone;
-                                    }
-                                }
-                            }
-                        });
-                    });
-                } else {
-                    setTimeout(tryLoadFBX, 500);
+                // Ждём пока mpRemotePlayers будет содержать наш меш
+                let targetRp = null;
+                for (const key in mpRemotePlayers) {
+                    if (mpRemotePlayers[key].mesh === g) {
+                        targetRp = mpRemotePlayers[key];
+                        break;
+                    }
                 }
+                if (!targetRp) { setTimeout(tryLoadFBX, 300); return; }
+                if (!charModelsReady) { setTimeout(tryLoadFBX, 500); return; }
+                
+                loadCharForBot(team, idx, (model) => {
+                    if (!model) return;
+                    model.position.copy(g.position);
+                    model.position.y = 0;
+                    model.rotation.copy(g.rotation);
+                    scene.remove(g);
+                    scene.add(model);
+                    targetRp.mesh = model;
+                    targetRp.useGltf = true;
+                    targetRp.mixer = model.userData.mixer;
+                    targetRp.actions = model.userData.actions;
+                    if (model.userData.rightHand && gltfWeapons._loaded && targetRp.weapon) {
+                        const wKey = targetRp.weapon;
+                        if (gltfWeapons[wKey]) {
+                            const weaponClone = gltfWeapons[wKey].clone();
+                            weaponClone.scale.set(0.7, 0.7, 0.7);
+                            weaponClone.position.set(5.5, 20, 0);
+                            weaponClone.quaternion.identity();
+                            const qZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+                            const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+                            weaponClone.quaternion.copy(qX.multiply(qZ));
+                            model.userData.rightHand.add(weaponClone);
+                            targetRp.gunMesh = weaponClone;
+                        }
+                    }
+                    console.log('[MP] Remote player model replaced with FBX');
+                });
             };
-            tryLoadFBX();
+            setTimeout(tryLoadFBX, 500);
 
             return g;
         }
@@ -3389,7 +3392,9 @@
                 }
 
                 rp.mesh.position.set(data.x, yPos, data.z);
-                rp.mesh.rotation.y = Math.atan2(-data.dx, -data.dz);
+                const remoteRotOffset = (rp.mesh.userData && rp.mesh.userData.rotOffset) || 0;
+                const baseRot = rp.useGltf ? 0 : Math.PI;
+                rp.mesh.rotation.y = Math.atan2(data.dx, data.dz) + baseRot + remoteRotOffset;
 
                 // Обновляем анимации для GLTF модели
                 if (rp.mixer) {
