@@ -428,7 +428,7 @@
         floor.receiveShadow = true;
         scene.add(floor);
 
-        scene.add(new THREE.AmbientLight(0xfff5e0, 0.6));
+        scene.add(new THREE.AmbientLight(0xfff5e0, 1.0));
         const sun = new THREE.DirectionalLight(0xfff0cc, 1.4);
         sun.position.set(30, 50, 20);
         sun.castShadow = true;
@@ -764,8 +764,8 @@
                                 color: new THREE.Color(0xffffff),
                                 roughness: 0.6,
                                 metalness: 0.0,
-                                emissive: new THREE.Color(0x333333),
-                                emissiveIntensity: 1.0
+                                emissive: new THREE.Color(0x555555),
+                                emissiveIntensity: 1.2
                             });
                             if (mat.map) newMat.emissiveMap = mat.map;
                             return newMat;
